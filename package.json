@@ -1,0 +1,58 @@
+{
+  "name": "@ketlark/hugin-mcp",
+  "version": "1.0.0",
+  "description": "Hugin MCP — 100% local, 100% free MCP server for web search and web reading. No API keys needed. Self-hosted alternative to Tavily, Exa, Jina Reader, Firecrawl, and Brave Search API.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "hugin-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/smoke.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "web-search",
+    "web-search-mcp",
+    "web-reader",
+    "web-scraper",
+    "searxng",
+    "readability",
+    "puppeteer",
+    "agent",
+    "ai",
+    "local",
+    "free",
+    "self-hosted",
+    "no-api-key",
+    "tavily-alternative",
+    "exa-alternative",
+    "jina-alternative",
+    "firecrawl-alternative"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ketlark/hugin-mcp.git"
+  },
+  "homepage": "https://github.com/Ketlark/hugin-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Ketlark/hugin-mcp/issues"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@mozilla/readability": "^0.6.0",
+    "better-sqlite3": "^12.9.0",
+    "jsdom": "^29.1.1",
+    "pdf-parse": "^2.4.5",
+    "puppeteer-core": "^24.43.0",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  }
+}

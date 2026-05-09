@@ -1,0 +1,22 @@
+use_default_settings: true
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "auto"
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "hugin-mcp-local-notsecret"
+  limiter: false
+  public_instance: false
+  bind_address: "0.0.0.0"
+  port: 8080
+
+ui:
+  static_use_hash: true
+
+outgoing:
+  request_timeout: 10
