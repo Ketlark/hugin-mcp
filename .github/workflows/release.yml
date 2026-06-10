@@ -1,0 +1,51 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Update CHANGELOG
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          VERSION=${GITHUB_REF_NAME}
+          DATE=$(date +%Y-%m-%d)
+
+          echo "## [${VERSION#v}] - ${DATE}" > /tmp/changelog-entry.md
+
+          if [ -n "$PREV_TAG" ]; then
+            LOG_RANGE="$PREV_TAG..HEAD"
+          else
+            LOG_RANGE="HEAD"
+          fi
+
+          FEATS=$(git log $LOG_RANGE --format="- %s" --grep="^feat" 2>/dev/null || true)
+          FIXES=$(git log $LOG_RANGE --format="- %s" --grep="^fix" 2>/dev/null || true)
+          CHORES=$(git log $LOG_RANGE --format="- %s" --grep="^chore\|^ci\|^docs\|^style\|^refactor\|^perf\|^test" 2>/dev/null || true)
+          OTHER=$(git log $LOG_RANGE --format="- %s" --invert-grep --grep="^feat\|^fix\|^chore\|^ci\|^docs\|^style\|^refactor\|^perf\|^test" 2>/dev/null || true)
+
+          if [ -n "$FEATS" ]; then echo -e "\n### Added\n$FEATS" >> /tmp/changelog-entry.md; fi
+          if [ -n "$FIXES" ]; then echo -e "\n### Fixed\n$FIXES" >> /tmp/changelog-entry.md; fi
+          if [ -n "$OTHER" ]; then echo -e "\n### Changed\n$OTHER" >> /tmp/changelog-entry.md; fi
+          if [ -n "$CHORES" ]; then echo -e "\n### Internal\n$CHORES" >> /tmp/changelog-entry.md; fi
+
+          if [ -f CHANGELOG.md ]; then
+            echo -e "$(cat /tmp/changelog-entry.md)\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
+          else
+            cp /tmp/changelog-entry.md CHANGELOG.md
+          fi
+
+          cat CHANGELOG.md
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
