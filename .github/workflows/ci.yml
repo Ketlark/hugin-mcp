@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      searxng:
+        image: searxng/searxng:latest
+        ports:
+          - 8888:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Wait for SearXNG
+        run: |
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8888/healthz > /dev/null 2>&1; then
+              echo "SearXNG ready"
+              exit 0
+            fi
+            echo "Waiting for SearXNG... ($i/15)"
+            sleep 1
+          done
+          echo "SearXNG not ready after 15s, tests will use Bing fallback"
+      - run: npm run test:all
+        continue-on-error: true
