@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { htmlToMarkdown, stripTags, cleanHTML, extractLinks, extractImages } from "../../src/html.js";
+import { describe, it } from "node:test";
+import { cleanHTML, extractImages, extractLinks, htmlToMarkdown, stripTags } from "../../src/html.js";
 
 describe("stripTags", () => {
   it("removes all HTML tags", () => {

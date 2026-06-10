@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatSearchResponse, formatReadResponse } from "../../src/format.js";
+import { describe, it } from "node:test";
+import { formatReadResponse, formatSearchResponse } from "../../src/format.js";
 
 describe("formatSearchResponse", () => {
   it("formats results with engine name", () => {
