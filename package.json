@@ -22,7 +22,8 @@
     "test:all": "npm run test:unit && npm test",
     "lint": "biome check src/ test/",
     "lint:fix": "biome check --fix --unsafe src/ test/",
-    "format": "biome format --write src/ test/"
+    "format": "biome format --write src/ test/",
+    "prepare": "husky"
   },
   "keywords": [
     "mcp",
@@ -50,6 +51,14 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "lint-staged": {
+    "*.{js,mjs}": [
+      "biome check --fix"
+    ],
+    "*.{json,md,yml}": [
+      "biome format --write"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Ketlark/hugin-mcp.git"
@@ -69,6 +78,8 @@
     "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16"
+    "@biomejs/biome": "^2.4.16",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7"
   }
 }
