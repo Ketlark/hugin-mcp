@@ -2,9 +2,9 @@
  * SQLite cache layer — single responsibility: get/set with TTL.
  */
 
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import Database from "better-sqlite3";
-import { mkdirSync } from "fs";
-import { join } from "path";
 import { config } from "./config.js";
 
 mkdirSync(config.cacheDir, { recursive: true });

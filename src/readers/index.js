@@ -6,24 +6,23 @@
  * A reader returning { rewrite: newUrl } triggers a URL rewrite instead of direct handling.
  */
 
-import { config } from "../config.js";
 import { getCached, setCache } from "../cache.js";
-import { robustFetch, BROWSER_HEADERS, fetchWithPuppeteer } from "../fetcher.js";
-import { cleanHTML, extractMetadata, extractArticle, htmlToMarkdown, extractLinks, extractImages, safeHostname } from "../html.js";
+import { config } from "../config.js";
+import { BROWSER_HEADERS, fetchWithPuppeteer, robustFetch } from "../fetcher.js";
+import { cleanHTML, extractArticle, extractImages, extractLinks, extractMetadata, htmlToMarkdown } from "../html.js";
 import { readerLMConvert } from "../llm.js";
-
+import * as arxiv from "./arxiv.js";
+import * as dockerhub from "./dockerhub.js";
 // --- Specialized readers (ordered by priority) ---
 import * as github from "./github.js";
-import * as reddit from "./reddit.js";
-import * as youtube from "./youtube.js";
 import * as hackernews from "./hackernews.js";
-import * as stackexchange from "./stackexchange.js";
-import * as pdf from "./pdf.js";
-import * as arxiv from "./arxiv.js";
 import * as mdn from "./mdn.js";
 import * as npm from "./npm.js";
-import * as dockerhub from "./dockerhub.js";
+import * as pdf from "./pdf.js";
+import * as reddit from "./reddit.js";
+import * as stackexchange from "./stackexchange.js";
 import { fetchWikipediaSections, isWikipedia } from "./wikipedia.js";
+import * as youtube from "./youtube.js";
 
 const SPECIALIZED_READERS = [github, reddit, youtube, hackernews, stackexchange, pdf, arxiv, mdn, npm, dockerhub];
 
@@ -38,7 +37,13 @@ const SPECIALIZED_READERS = [github, reddit, youtube, hackernews, stackexchange,
  * @returns {Promise<{url, title, description, content, format, source, linksSummary?, imagesSummary?}>}
  */
 export async function readPage(url, opts = {}) {
-  const { format = "markdown", llm = false, withLinksSummary = false, withImagesSummary = false, maxLength = null } = opts;
+  const {
+    format = "markdown",
+    llm = false,
+    withLinksSummary = false,
+    withImagesSummary = false,
+    maxLength = null,
+  } = opts;
 
   // Check cache first
   const cacheKey = `read:${url}:${format}:${llm}:${maxLength || "none"}`;
@@ -53,8 +58,13 @@ export async function readPage(url, opts = {}) {
     const wikiResult = await fetchWikipediaSections(url);
     if (wikiResult) {
       if (maxLength && wikiResult.content.length > maxLength)
-        wikiResult.content = wikiResult.content.substring(0, maxLength) + "\n\n[... truncated]";
-      const page = { url, ...wikiResult, format, linksSummary: withLinksSummary ? extractLinks(wikiResult.content) : undefined };
+        wikiResult.content = `${wikiResult.content.substring(0, maxLength)}\n\n[... truncated]`;
+      const page = {
+        url,
+        ...wikiResult,
+        format,
+        linksSummary: withLinksSummary ? extractLinks(wikiResult.content) : undefined,
+      };
       setCache(cacheKey, page);
       return page;
     }
@@ -75,8 +85,13 @@ export async function readPage(url, opts = {}) {
 
       // Direct result from specialized reader
       if (maxLength && result.content.length > maxLength)
-        result.content = result.content.substring(0, maxLength) + "\n\n[... truncated]";
-      const page = { url, ...result, format, linksSummary: withLinksSummary ? extractLinks(result.content) : undefined };
+        result.content = `${result.content.substring(0, maxLength)}\n\n[... truncated]`;
+      const page = {
+        url,
+        ...result,
+        format,
+        linksSummary: withLinksSummary ? extractLinks(result.content) : undefined,
+      };
       setCache(cacheKey, page);
       return page;
     }
@@ -122,7 +137,7 @@ async function genericRead(url, opts) {
   // Non-HTML (text, JSON, etc.)
   if (!contentType.includes("html") && !contentType.includes("xml")) {
     let content = rawHTML;
-    if (maxLength && content.length > maxLength) content = content.substring(0, maxLength) + "\n\n[... truncated]";
+    if (maxLength && content.length > maxLength) content = `${content.substring(0, maxLength)}\n\n[... truncated]`;
     const result = { url, title: "", description: "", content, format: "text", source: "native-fetch" };
     setCache(cacheKey, result);
     return result;
@@ -151,8 +166,15 @@ async function genericRead(url, opts) {
 
   if (!article || article.textContent.trim().length < 50) {
     let content = htmlToMarkdown(cleaned);
-    if (maxLength && content.length > maxLength) content = content.substring(0, maxLength) + "\n\n[... truncated]";
-    const result = { url, title: meta.ogTitle || meta.title, description: meta.description, content, format, source: "turndown-raw" };
+    if (maxLength && content.length > maxLength) content = `${content.substring(0, maxLength)}\n\n[... truncated]`;
+    const result = {
+      url,
+      title: meta.ogTitle || meta.title,
+      description: meta.description,
+      content,
+      format,
+      source: "turndown-raw",
+    };
     setCache(cacheKey, result);
     return result;
   }
@@ -163,18 +185,28 @@ async function genericRead(url, opts) {
   let content, source;
   if (llm) {
     const llmResult = await readerLMConvert(article.contentHTML);
-    if (llmResult) { content = llmResult; source = "readerlm-v2"; }
-    else { content = htmlToMarkdown(article.contentHTML); source = "readability"; }
+    if (llmResult) {
+      content = llmResult;
+      source = "readerlm-v2";
+    } else {
+      content = htmlToMarkdown(article.contentHTML);
+      source = "readability";
+    }
   } else {
     content = htmlToMarkdown(article.contentHTML);
     source = usedPuppeteer ? "puppeteer+readability" : "readability";
     console.error(`   ${source}: ${article.contentHTML.length} chars → ${content.length} chars`);
   }
 
-  if (maxLength && content.length > maxLength) content = content.substring(0, maxLength) + "\n\n[... truncated]";
+  if (maxLength && content.length > maxLength) content = `${content.substring(0, maxLength)}\n\n[... truncated]`;
 
   const result = {
-    url, title, description, content, format, source,
+    url,
+    title,
+    description,
+    content,
+    format,
+    source,
     linksSummary: withLinksSummary ? extractLinks(content) : undefined,
     imagesSummary: withImagesSummary ? extractImages(content) : undefined,
   };
@@ -193,8 +225,17 @@ async function readViaPuppeteer(url, opts) {
   if (!article || article.textContent.trim().length < config.readabilityMinChars) return null;
 
   console.error(`   Puppeteer+Readability: ${article.textContent.trim().length} chars ✅`);
-  let content = llm ? (await readerLMConvert(article.contentHTML) || htmlToMarkdown(article.contentHTML)) : htmlToMarkdown(article.contentHTML);
+  let content = llm
+    ? (await readerLMConvert(article.contentHTML)) || htmlToMarkdown(article.contentHTML)
+    : htmlToMarkdown(article.contentHTML);
   const source = llm ? "puppeteer+readerlm-v2" : "puppeteer+readability";
-  if (maxLength && content.length > maxLength) content = content.substring(0, maxLength) + "\n\n[... truncated]";
-  return { url, title: meta.ogTitle || article.title || meta.title, description: meta.description || article.excerpt, content, format, source };
+  if (maxLength && content.length > maxLength) content = `${content.substring(0, maxLength)}\n\n[... truncated]`;
+  return {
+    url,
+    title: meta.ogTitle || article.title || meta.title,
+    description: meta.description || article.excerpt,
+    content,
+    format,
+    source,
+  };
 }

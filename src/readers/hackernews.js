@@ -26,7 +26,7 @@ async function readItem(id) {
 
     let md = `# ${item.title || "Comment"}\n\n`;
     md += `**By** ${item.by} | **Score** ${item.score || 0} | 📅 ${fmtDate(item.time)}\n\n`;
-    if (item.text) md += cleanHtml(item.text) + "\n\n";
+    if (item.text) md += `${cleanHtml(item.text)}\n\n`;
     if (item.url) md += `🔗 [External link](${item.url})\n\n`;
     md += `💬 ${item.descendants || 0} comments\n\n`;
 
@@ -44,7 +44,12 @@ async function readItem(id) {
       }
     }
     console.error(`   HN API: item ${id} "${item.title?.substring(0, 40)}" (${item.kids?.length || 0} kids)`);
-    return { title: item.title || `HN Comment by ${item.by}`, description: item.title || "", content: md, source: "hn-api" };
+    return {
+      title: item.title || `HN Comment by ${item.by}`,
+      description: item.title || "",
+      content: md,
+      source: "hn-api",
+    };
   } catch (e) {
     console.error(`   HN API failed: ${e.message}`);
     return null;
@@ -67,8 +72,8 @@ async function readListing(url) {
       ids.slice(0, 20).map((id) =>
         fetch(`${API_BASE}/item/${id}.json`, { signal: AbortSignal.timeout(10000) })
           .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null)
-      )
+          .catch(() => null),
+      ),
     );
 
     let md = `# Hacker News — ${listType.replace("stories", " stories")}\n\n`;
@@ -84,5 +89,13 @@ async function readListing(url) {
   }
 }
 
-function fmtDate(unix) { return new Date(unix * 1000).toLocaleDateString(); }
-function cleanHtml(h) { return h.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"); }
+function fmtDate(unix) {
+  return new Date(unix * 1000).toLocaleDateString();
+}
+function cleanHtml(h) {
+  return h
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}

@@ -11,15 +11,15 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-
+import { getCacheCount, getCached, setCache } from "./cache.js";
 import { config } from "./config.js";
-import { getCached, setCache, getCacheCount } from "./cache.js";
-import { checkReaderLM } from "./llm.js";
 import { warmBrowser } from "./fetcher.js";
-import { searchSearXNG, ensureSearXNGReady } from "./search/searxng.js";
-import { searchBing } from "./search/bing.js";
+import { formatReadResponse, formatSearchResponse } from "./format.js";
+import { checkReaderLM } from "./llm.js";
 import { readPage } from "./readers/index.js";
-import { formatSearchResponse, formatReadResponse } from "./format.js";
+import { takeScreenshot } from "./screenshot.js";
+import { searchBing } from "./search/bing.js";
+import { ensureSearXNGReady, searchSearXNG } from "./search/searxng.js";
 
 // ============================================================================
 // MCP Server
@@ -27,12 +27,31 @@ import { formatSearchResponse, formatReadResponse } from "./format.js";
 
 let searxngAvailable = false;
 
-const server = new Server(
-  { name: "hugin-mcp", version: config.version },
-  { capabilities: { tools: {} } },
-);
+const server = new Server({ name: "hugin-mcp", version: config.version }, { capabilities: { tools: {} } });
 
 // --- Tool definitions ---
+
+// --- Shared schema definitions (DRY) ---
+
+const SEARCH_PARAMS = {
+  query: { type: "string", description: 'Search query (supports site:, "exact", -exclude)' },
+  count: { type: "number", description: "Max results (1–20)", default: 10 },
+  engine: { type: "string", enum: ["auto", "searxng", "bing"], default: "auto" },
+  categories: { type: "string", description: "general, news, images, videos, it, science, music, files, social media" },
+  language: { type: "string", description: "en, fr, de, es, ja, zh, etc." },
+  time_range: { type: "string", enum: ["day", "month", "year"] },
+  domains: {
+    type: "array",
+    items: { type: "string" },
+    description: "Restrict search to these domains (e.g. ['github.com', 'stackoverflow.com'])",
+  },
+  filetype: { type: "string", description: "Restrict to file type (e.g. 'pdf', 'doc', 'ppt')" },
+};
+
+const CONTENT_PARAMS = {
+  format: { type: "string", enum: ["markdown", "text"], default: "markdown" },
+  max_length: { type: "number", description: "Max content chars per page" },
+};
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -44,15 +63,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
-          query: { type: "string", description: 'Search query (supports site:, "exact", -exclude)' },
-          count: { type: "number", description: "Max results (1–20)", default: 10 },
-          engine: { type: "string", enum: ["auto", "searxng", "bing"], default: "auto" },
-          categories: {
-            type: "string",
-            description: "general, news, images, videos, it, science, music, files, social media",
-          },
-          language: { type: "string", description: "en, fr, de, es, ja, zh, etc." },
-          time_range: { type: "string", enum: ["day", "month", "year"] },
+          ...SEARCH_PARAMS,
           pageno: { type: "number", default: 1 },
         },
         required: ["query"],
@@ -78,9 +89,47 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           format: { type: "string", enum: ["markdown", "text"], default: "markdown" },
           llm: { type: "boolean", default: false, description: "Use ReaderLM-v2 for higher quality (~10-30s)" },
           with_links_summary: { type: "boolean", default: false, description: "Extract and return a summary of links" },
-          with_images_summary: { type: "boolean", default: false, description: "Extract and return a summary of images" },
+          with_images_summary: {
+            type: "boolean",
+            default: false,
+            description: "Extract and return a summary of images",
+          },
           max_length: { type: "number", description: "Max content chars per page" },
         },
+      },
+    },
+    {
+      name: "web_search_read",
+      description:
+        "Search the web AND automatically read the top results in one call. " +
+        "Returns search results with the full content of the top N pages already extracted. " +
+        "Eliminates the need for separate search→read→read round trips.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          ...SEARCH_PARAMS,
+          read_count: { type: "number", description: "Number of top results to auto-read (1–5)", default: 3 },
+          ...CONTENT_PARAMS,
+        },
+        required: ["query"],
+      },
+    },
+    {
+      name: "web_screenshot",
+      description:
+        "Capture a screenshot of a web page as a PNG image. " +
+        "Requires Chrome/Chromium installed. Useful for viewing charts, layouts, UIs, " +
+        "and any visual content that can't be represented as text.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL to screenshot" },
+          width: { type: "number", description: "Viewport width in pixels", default: 1280 },
+          height: { type: "number", description: "Viewport height in pixels", default: 800 },
+          full_page: { type: "boolean", default: false, description: "Capture the full scrollable page" },
+          format: { type: "string", enum: ["png", "jpeg"], default: "png" },
+        },
+        required: ["url"],
       },
     },
   ],
@@ -93,39 +142,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (name === "web_search") return await handleSearch(args);
   if (name === "web_read") return await handleRead(args);
+  if (name === "web_search_read") return await handleSearchRead(args);
+  if (name === "web_screenshot") return await handleScreenshot(args);
   return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
 });
 
-// --- Search handler ---
+// --- Core search logic (returns structured data) ---
 
-async function handleSearch(args) {
-  const { query, count = 10, engine = "auto", categories, language, time_range, pageno = 1 } = args;
-  const cacheKey = `search:${query}:${count}:${engine}:${categories}:${language}:${time_range}:${pageno}`;
+/**
+ * Execute a search and return structured data (not formatted text).
+ * Used by both web_search and web_search_read handlers.
+ */
+async function doSearch(args) {
+  const { query, count = 10, engine = "auto", categories, language, time_range, pageno = 1, domains, filetype } = args;
+  const cacheKey = `search:${query}:${count}:${engine}:${categories}:${language}:${time_range}:${pageno}:${(domains || []).join(",")}:${filetype || ""}`;
   const cached = getCached(cacheKey);
   if (cached) {
     console.error(`   Cache HIT: search "${query}"`);
-    return { content: [{ type: "text", text: formatSearchResponse(cached, cached._engine + " (cached)") }] };
+    return { data: cached, engine: `${cached._engine} (cached)` };
   }
-  try {
-    let data, usedEngine;
-    const useSX = engine === "searxng" || (engine === "auto" && searxngAvailable);
-    if (useSX) {
-      try {
-        data = await searchSearXNG(query, { count: Math.min(count, 20), categories, language, timeRange: time_range, pageno });
-        usedEngine = "searxng";
-      } catch {
-        if (engine === "auto") {
-          searxngAvailable = false;
-          data = await searchBing(query, { count });
-          usedEngine = "bing (fallback)";
-        } else throw new Error("SearXNG down");
-      }
-    } else {
-      data = await searchBing(query, { count });
-      usedEngine = "bing";
+  let data, usedEngine;
+  const useSX = engine === "searxng" || (engine === "auto" && searxngAvailable);
+  if (useSX) {
+    try {
+      data = await searchSearXNG(query, {
+        count: Math.min(count, 20),
+        categories,
+        language,
+        timeRange: time_range,
+        pageno,
+        domains,
+        filetype,
+      });
+      usedEngine = "searxng";
+    } catch {
+      if (engine === "auto") {
+        searxngAvailable = false;
+        data = await searchBing(query, { count });
+        usedEngine = "bing (fallback)";
+      } else throw new Error("SearXNG down");
     }
-    data._engine = usedEngine;
-    setCache(cacheKey, data);
+  } else {
+    data = await searchBing(query, { count });
+    usedEngine = "bing";
+  }
+  data._engine = usedEngine;
+  setCache(cacheKey, data);
+  return { data, engine: usedEngine };
+}
+
+// --- Search handler (formats for MCP response) ---
+
+async function handleSearch(args) {
+  try {
+    const { data, engine: usedEngine } = await doSearch(args);
     return { content: [{ type: "text", text: formatSearchResponse(data, usedEngine) }] };
   } catch (e) {
     return { content: [{ type: "text", text: `Search error: ${e.message}` }], isError: true };
@@ -135,20 +205,139 @@ async function handleSearch(args) {
 // --- Read handler ---
 
 async function handleRead(args) {
-  const { url, urls, format = "markdown", llm = false, with_links_summary = false, with_images_summary = false, max_length } = args;
+  const {
+    url,
+    urls,
+    format = "markdown",
+    llm = false,
+    with_links_summary = false,
+    with_images_summary = false,
+    max_length,
+  } = args;
   const targetUrls = urls?.length ? urls : url ? [url] : [];
   if (!targetUrls.length) return { content: [{ type: "text", text: "Provide url or urls[]" }], isError: true };
   try {
     const results = await Promise.all(
       targetUrls.map((u) =>
-        readPage(u, { format, llm, withLinksSummary: with_links_summary, withImagesSummary: with_images_summary, maxLength: max_length }).catch((e) => ({
-          url: u, title: "Error", description: "", content: `Error: ${e.message}`, source: "error", format,
+        readPage(u, {
+          format,
+          llm,
+          withLinksSummary: with_links_summary,
+          withImagesSummary: with_images_summary,
+          maxLength: max_length,
+        }).catch((e) => ({
+          url: u,
+          title: "Error",
+          description: "",
+          content: `Error: ${e.message}`,
+          source: "error",
+          format,
         })),
       ),
     );
     return { content: [{ type: "text", text: results.map(formatReadResponse).join("\n\n---\n\n") }] };
   } catch (e) {
     return { content: [{ type: "text", text: `Read error: ${e.message}` }], isError: true };
+  }
+}
+
+// --- Screenshot handler ---
+
+async function handleScreenshot(args) {
+  const { url, width = 1280, height = 800, full_page = false, format = "png" } = args;
+  try {
+    const result = await takeScreenshot(url, { width, height, fullPage: full_page, format });
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Screenshot of **${result.title}**\n🔗 ${url}\n📐 ${result.width}x${result.height}${full_page ? " (full page)" : ""}\n`,
+        },
+        { type: "image", data: result.screenshot, mimeType },
+      ],
+    };
+  } catch (e) {
+    return { content: [{ type: "text", text: `Screenshot error: ${e.message}` }], isError: true };
+  }
+}
+
+// --- Search + Read handler ---
+
+async function handleSearchRead(args) {
+  const {
+    query,
+    count = 10,
+    read_count: readCount = 3,
+    engine = "auto",
+    categories,
+    language,
+    time_range,
+    domains,
+    filetype,
+    format = "markdown",
+    max_length: maxLength,
+  } = args;
+
+  // Clamp read_count to 1–5
+  const effectiveReadCount = Math.min(Math.max(readCount, 1), 5);
+
+  // Check combined cache first
+  const combinedCacheKey = `searchread:${query}:${count}:${engine}:${categories}:${language}:${time_range}:${(domains || []).join(",")}:${filetype || ""}:${effectiveReadCount}:${format}:${maxLength || "none"}`;
+  const combinedCached = getCached(combinedCacheKey);
+  if (combinedCached) {
+    console.error(`   Cache HIT: search_read "${query}"`);
+    return { content: [{ type: "text", text: combinedCached.text }] };
+  }
+
+  try {
+    // Step 1: Search (structured data, not formatted text)
+    const { data, engine: usedEngine } = await doSearch({
+      query,
+      count,
+      engine,
+      categories,
+      language,
+      time_range,
+      domains,
+      filetype,
+    });
+    const searchText = formatSearchResponse(data, usedEngine);
+
+    // Extract URLs from structured results (not from formatted text)
+    const urls = (data.results || [])
+      .slice(0, effectiveReadCount)
+      .map((r) => r.url)
+      .filter(Boolean);
+
+    if (!urls.length) {
+      return { content: [{ type: "text", text: searchText }] };
+    }
+
+    console.error(`   search_read: reading top ${urls.length} pages in parallel...`);
+
+    // Step 2: Read top N pages in parallel
+    const readResults = await Promise.all(
+      urls.map((u) =>
+        readPage(u, { format, maxLength }).catch((e) => ({
+          url: u,
+          title: "Error",
+          description: "",
+          content: `Error: ${e.message}`,
+          source: "error",
+          format,
+        })),
+      ),
+    );
+
+    // Step 3: Combine search results + page contents
+    const pageContents = readResults.map(formatReadResponse).join("\n\n---\n\n");
+    const combined = `${searchText}\n\n${"=".repeat(60)}\n\n📖 **Page contents (top ${urls.length}):**\n\n${pageContents}`;
+
+    setCache(combinedCacheKey, { text: combined });
+    return { content: [{ type: "text", text: combined }] };
+  } catch (e) {
+    return { content: [{ type: "text", text: `Search+Read error: ${e.message}` }], isError: true };
   }
 }
 

@@ -8,11 +8,11 @@ export function formatSearchResponse(d, engine) {
   ];
   if (d.answers?.length) {
     lines.push("", "💬 **Direct answers:**");
-    d.answers.forEach((a) => lines.push(`   ${a.answer} (${a.engine})`));
+    for (const a of d.answers) lines.push(`   ${a.answer} (${a.engine})`);
   }
   if (d.infoboxes?.length) {
     lines.push("", "ℹ️ **Quick info:**");
-    d.infoboxes.forEach((ib) => lines.push(`   **${ib.title}**: ${ib.content?.substring(0, 300)}`));
+    for (const ib of d.infoboxes) lines.push(`   **${ib.title}**: ${ib.content?.substring(0, 300)}`);
   }
   lines.push("");
   d.results.forEach((r, i) => {
@@ -41,12 +41,12 @@ export function formatReadResponse(r) {
 
   if (r.linksSummary?.length) {
     lines.push("", "---", `📎 **Links (${r.linksSummary.length}):**`);
-    r.linksSummary.slice(0, 20).forEach((l) => lines.push(`   - [${l.text || "untitled"}](${l.href})`));
+    for (const l of r.linksSummary.slice(0, 20)) lines.push(`   - [${l.text || "untitled"}](${l.href})`);
     if (r.linksSummary.length > 20) lines.push(`   ... +${r.linksSummary.length - 20} more`);
   }
   if (r.imagesSummary?.length) {
     lines.push("", "---", `🖼️ **Images (${r.imagesSummary.length}):**`);
-    r.imagesSummary.forEach((img) => lines.push(`   - ${img.alt || "image"}: ${img.src}`));
+    for (const img of r.imagesSummary) lines.push(`   - ${img.alt || "image"}: ${img.src}`);
   }
   return lines.join("\n");
 }

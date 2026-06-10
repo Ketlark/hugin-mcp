@@ -15,7 +15,7 @@ export async function robustFetch(url, opts = {}) {
     try {
       const r = await fetch(url, { ...fetchOpts, signal: AbortSignal.timeout(timeout) });
       if (r.status === 429 && attempt < retries) {
-        const delay = parseInt(r.headers.get("retry-after") || "2") * 1000;
+        const delay = parseInt(r.headers.get("retry-after") || "2", 10) * 1000;
         console.error(`   Rate limited, retrying in ${delay}ms...`);
         await new Promise((res) => setTimeout(res, delay));
         continue;
@@ -30,7 +30,8 @@ export async function robustFetch(url, opts = {}) {
 }
 
 export const BROWSER_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   Accept: "text/html,application/xhtml+xml,*/*",
   "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
 };
@@ -55,42 +56,66 @@ export async function warmBrowser() {
   else console.error(`   ⚠️  Puppeteer failed — ${config.chromePath}`);
 }
 
-async function getBrowser() {
+/**
+ * Get or launch the singleton Puppeteer browser instance.
+ * Returns null if no Chrome/Chromium is available.
+ * @returns {Promise<import('puppeteer-core').Browser|null>}
+ */
+export async function getBrowser() {
   if (!config.chromePath) return null;
   if (browserInstance?.connected) return browserInstance;
   if (browserLaunching) return browserLaunching;
-  browserLaunching = puppeteer.launch({
-    executablePath: config.chromePath,
-    headless: true,
-    args: [
-      "--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu",
-      "--disable-dev-shm-usage", "--disable-extensions", "--disable-background-timer-throttling",
-      "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
-      "--no-first-run", "--disable-default-apps", "--disable-sync",
-    ],
-  }).then((b) => {
-    browserInstance = b;
-    b.on("disconnected", () => { browserInstance = null; browserLaunching = null; });
-    browserLaunching = null;
-    return b;
-  }).catch((e) => {
-    console.error(`   ⚠️ Puppeteer launch failed: ${e.message}`);
-    browserLaunching = null;
-    return null;
-  });
+  browserLaunching = puppeteer
+    .launch({
+      executablePath: config.chromePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--disable-extensions",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--no-first-run",
+        "--disable-default-apps",
+        "--disable-sync",
+      ],
+    })
+    .then((b) => {
+      browserInstance = b;
+      b.on("disconnected", () => {
+        browserInstance = null;
+        browserLaunching = null;
+      });
+      browserLaunching = null;
+      return b;
+    })
+    .catch((e) => {
+      console.error(`   ⚠️ Puppeteer launch failed: ${e.message}`);
+      browserLaunching = null;
+      return null;
+    });
   return browserLaunching;
 }
 
-const COOKIE_BANNER_SELECTORS = [
-  "#onetrust-accept-btn-handler", ".js-accept-cookies",
-  "button[data-cc-action=accept]", "button[aria-label*=Accept]",
-  ".cookie-consent-accept", "#accept-cookies",
-  "button[data-testid=\"reject-all\"][class*=\"button\"]",
-  "button[id*=\"reject\"]", "button[class*=\"reject\"]",
-  "[class*=\"consent-accept\"]", "[class*=\"cookie-accept\"]",
-  "[class*=\"accept-all\"]", "[class*=\"agree-btn\"]",
+export const COOKIE_BANNER_SELECTORS = [
+  "#onetrust-accept-btn-handler",
+  ".js-accept-cookies",
+  "button[data-cc-action=accept]",
+  "button[aria-label*=Accept]",
+  ".cookie-consent-accept",
+  "#accept-cookies",
+  'button[data-testid="reject-all"][class*="button"]',
+  'button[id*="reject"]',
+  'button[class*="reject"]',
+  '[class*="consent-accept"]',
+  '[class*="cookie-accept"]',
+  '[class*="accept-all"]',
+  '[class*="agree-btn"]',
   "#onetrust-reject-all-handler",
-  ".qc-cmp-button[mode=\"primary\"]",
+  '.qc-cmp-button[mode="primary"]',
 ];
 
 export async function fetchWithPuppeteer(url) {
@@ -114,12 +139,15 @@ export async function fetchWithPuppeteer(url) {
 
     // Dismiss cookie banners
     for (const selector of COOKIE_BANNER_SELECTORS) {
-      try { await page.click(selector, { timeout: 300 }); await new Promise((r) => setTimeout(r, 300)); } catch {}
+      try {
+        await page.click(selector, { timeout: 300 });
+        await new Promise((r) => setTimeout(r, 300));
+      } catch {}
     }
     await new Promise((r) => setTimeout(r, 1000));
 
     const html = await page.content();
-    console.error(`   Puppeteer: ${(Date.now() - t0)}ms, ${html.length} chars`);
+    console.error(`   Puppeteer: ${Date.now() - t0}ms, ${html.length} chars`);
     return html;
   } catch (e) {
     console.error(`   Puppeteer failed: ${e.message}`);

@@ -2,8 +2,8 @@
  * Reddit reader — JSON API for posts (fast, no auth), old.reddit.com for subreddits.
  */
 
-import { safeHostname } from "../html.js";
 import { config } from "../config.js";
+import { safeHostname } from "../html.js";
 
 export function canHandle(url) {
   const h = safeHostname(url);
@@ -13,7 +13,7 @@ export function canHandle(url) {
 /**
  * Returns { fetchURL, handled } — either handles it entirely or rewrites the URL.
  */
-export async function read(url, opts = {}) {
+export async function read(url, _opts = {}) {
   if (url.includes("/comments/")) {
     return await readPost(url);
   }
@@ -22,10 +22,10 @@ export async function read(url, opts = {}) {
 }
 
 async function readPost(url) {
-  const jsonUrl = url.replace(/\/$/, "") + ".json";
+  const jsonUrl = `${url.replace(/\/$/, "")}.json`;
   try {
     const r = await fetch(jsonUrl, {
-      headers: { "User-Agent": "Hugin/" + config.version + " (local)" },
+      headers: { "User-Agent": `Hugin/${config.version} (local)` },
       signal: AbortSignal.timeout(10000),
     });
     if (!r.ok) return null;
@@ -35,7 +35,7 @@ async function readPost(url) {
 
     let md = `# ${post.title}\n\n`;
     md += `**By** u/${post.author} | **Score** ${post.score} | 💬 ${post.num_comments} comments\n\n`;
-    if (post.selftext) md += post.selftext + "\n\n";
+    if (post.selftext) md += `${post.selftext}\n\n`;
     if (post.url && !post.is_self) md += `🔗 [Link](${post.url})\n\n`;
 
     const comments = data[1]?.data?.children?.filter((c) => c.kind === "t1").slice(0, 10) || [];

@@ -2,13 +2,13 @@
  * SearXNG search client — aggregates 70+ engines via local Docker instance.
  */
 
+import { execSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config } from "../config.js";
 import { robustFetch } from "../fetcher.js";
 import { safeHostname } from "../html.js";
-import { config } from "../config.js";
-import { existsSync, writeFileSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-import { execSync } from "child_process";
 
 // ---------------------------------------------------------------------------
 // Docker & SearXNG lifecycle
@@ -51,7 +51,9 @@ function ensureComposeFiles() {
   // If they're missing (edge case), generate them.
   if (!existsSync(composeDst)) {
     const port = process.env.HUGIN_SEARXNG_PORT || "8888";
-    writeFileSync(composeDst, `services:
+    writeFileSync(
+      composeDst,
+      `services:
   searxng:
     image: searxng/searxng:latest
     container_name: hugin-mcp-searxng
@@ -60,10 +62,13 @@ function ensureComposeFiles() {
     volumes:
       - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
     restart: unless-stopped
-`);
+`,
+    );
   }
   if (!existsSync(settingsDst)) {
-    writeFileSync(settingsDst, `use_default_settings: true
+    writeFileSync(
+      settingsDst,
+      `use_default_settings: true
 
 search:
   safe_search: 0
@@ -85,7 +90,8 @@ ui:
 
 outgoing:
   request_timeout: 10
-`);
+`,
+    );
   }
 }
 
@@ -129,7 +135,9 @@ export async function startSearXNG() {
           console.error("   SearXNG ready");
           return true;
         }
-      } catch { /* still starting */ }
+      } catch {
+        /* still starting */
+      }
     }
     console.error("   SearXNG container started but health check timed out after 15s");
     return false;
@@ -163,8 +171,24 @@ export async function ensureSearXNGReady() {
 // ---------------------------------------------------------------------------
 
 export async function searchSearXNG(query, opts = {}) {
-  const { count = 10, categories, language, timeRange, pageno = 1, engines } = opts;
-  const params = new URLSearchParams({ q: query, format: "json", pageno: String(pageno) });
+  const { count = 10, categories, language, timeRange, pageno = 1, engines, domains, filetype } = opts;
+
+  // Build effective query with domain filters and filetype
+  let effectiveQuery = query;
+  if (domains?.length) {
+    // Sanitize: keep only valid hostname characters
+    const safe = domains.map((d) => d.replace(/[^a-zA-Z0-9._-]/g, "")).filter(Boolean);
+    if (safe.length) {
+      const domainClauses = safe.map((d) => `site:${d}`).join(" OR ");
+      effectiveQuery = safe.length === 1 ? `${query} site:${safe[0]}` : `${query} (${domainClauses})`;
+    }
+  }
+  if (filetype) {
+    const safeType = filetype.replace(/[^a-zA-Z0-9]/g, "");
+    if (safeType) effectiveQuery += ` filetype:${safeType}`;
+  }
+
+  const params = new URLSearchParams({ q: effectiveQuery, format: "json", pageno: String(pageno) });
   if (count) params.set("limit", String(Math.min(count, 20)));
   if (categories) params.set("categories", categories);
   if (language) params.set("language", language);
@@ -179,22 +203,34 @@ export async function searchSearXNG(query, opts = {}) {
 
   // Deduplicate by URL
   const seen = new Set();
-  const results = (data.results || []).filter((r) => {
-    if (seen.has(r.url)) return false;
-    seen.add(r.url);
-    return true;
-  }).slice(0, count).map((r) => ({
-    title: r.title, url: r.url, snippet: r.content || "",
-    domain: safeHostname(r.url), engine: r.engine,
-    engines: r.engines || [], score: r.score, category: r.category,
-    publishedDate: r.publishedDate || null,
-  }));
+  const results = (data.results || [])
+    .filter((r) => {
+      if (seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    })
+    .slice(0, count)
+    .map((r) => ({
+      title: r.title,
+      url: r.url,
+      snippet: r.content || "",
+      domain: safeHostname(r.url),
+      engine: r.engine,
+      engines: r.engines || [],
+      score: r.score,
+      category: r.category,
+      publishedDate: r.publishedDate || null,
+    }));
 
   return {
-    results, query: data.query, numberOfResults: data.number_of_results,
+    results,
+    query: data.query,
+    numberOfResults: data.number_of_results,
     suggestions: data.suggestions || [],
     infoboxes: (data.infoboxes || []).map((ib) => ({
-      title: ib.infobox, content: ib.content, source: ib.engine,
+      title: ib.infobox,
+      content: ib.content,
+      source: ib.engine,
     })),
     answers: (data.answers || []).map((a) => ({ answer: a.answer, engine: a.engine })),
     corrections: data.corrections || [],

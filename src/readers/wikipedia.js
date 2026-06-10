@@ -3,8 +3,8 @@
  * citation markers. Reduces 150k chars → ~5-10k chars of actual content.
  */
 
-import { htmlToMarkdown } from "../html.js";
 import { config } from "../config.js";
+import { htmlToMarkdown } from "../html.js";
 
 /**
  * Clean Wikipedia-specific HTML artifacts from markdown produced by Turndown.
@@ -35,7 +35,9 @@ export function isWikipedia(url) {
   try {
     const h = new URL(url).hostname;
     return h.endsWith(".wikipedia.org");
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -50,14 +52,14 @@ export async function fetchWikipediaSections(url) {
     if (!title) return null;
 
     // Use action=parse to get structured sections
-    const apiUrl = `https://${lang}.wikipedia.org/w/api.php?` + new URLSearchParams({
+    const apiUrl = `https://${lang}.wikipedia.org/w/api.php?${new URLSearchParams({
       action: "parse",
       page: title,
       prop: "sections|text",
       format: "json",
       redirects: "1",
       disabletoc: "1",
-    });
+    })}`;
 
     const r = await fetch(apiUrl, {
       headers: { "User-Agent": `Hugin/${config.version}` },

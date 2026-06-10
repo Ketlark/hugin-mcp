@@ -3,8 +3,8 @@
  * No auth: 60 req/h. JSON responses, no scraping.
  */
 
-import { safeHostname } from "../html.js";
 import { config } from "../config.js";
+import { safeHostname } from "../html.js";
 
 const GITHUB_HEADERS = {
   Accept: "application/vnd.github.v3+json",
@@ -41,13 +41,15 @@ async function readIssue(repo, num, url) {
   const endpoint = isPR ? `pulls/${num}` : `issues/${num}`;
 
   const r = await fetch(`https://api.github.com/repos/${repo}/${endpoint}`, {
-    headers: GITHUB_HEADERS, signal: AbortSignal.timeout(10000),
+    headers: GITHUB_HEADERS,
+    signal: AbortSignal.timeout(10000),
   });
   if (!r.ok) return null;
   const data = await r.json();
 
   const cr = await fetch(`https://api.github.com/repos/${repo}/issues/${num}/comments?per_page=10`, {
-    headers: GITHUB_HEADERS, signal: AbortSignal.timeout(10000),
+    headers: GITHUB_HEADERS,
+    signal: AbortSignal.timeout(10000),
   });
   const comments = cr.ok ? await cr.json() : [];
 
@@ -55,7 +57,7 @@ async function readIssue(repo, num, url) {
   md += `**${isPR ? "Pull Request" : "Issue"}** #${num} | **State:** ${data.state} | `;
   md += `**By:** ${data.user?.login} | 💬 ${data.comments} comments\n\n`;
   if (data.labels?.length) md += `**Labels:** ${data.labels.map((l) => l.name).join(", ")}\n\n`;
-  if (data.body) md += data.body + "\n\n";
+  if (data.body) md += `${data.body}\n\n`;
   if (comments.length) {
     md += `---\n\n## Comments\n\n`;
     comments.forEach((c) => {
@@ -68,7 +70,8 @@ async function readIssue(repo, num, url) {
 
 async function readRepo(repo) {
   const r = await fetch(`https://api.github.com/repos/${repo}`, {
-    headers: GITHUB_HEADERS, signal: AbortSignal.timeout(10000),
+    headers: GITHUB_HEADERS,
+    signal: AbortSignal.timeout(10000),
   });
   if (!r.ok) return null;
   const d = await r.json();

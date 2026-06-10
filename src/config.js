@@ -3,9 +3,9 @@
  * All env vars, defaults, and platform detection in one place.
  */
 
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -56,7 +56,7 @@ function findChrome() {
 
 export const config = Object.freeze({
   name: "hugin-mcp",
-  version: "1.0.0",
+  version: "1.1.0",
 
   // SearXNG
   searxngUrl: process.env.HUGIN_SEARXNG_URL || process.env.SEARXNG_URL || "http://localhost:8888",
@@ -64,22 +64,24 @@ export const config = Object.freeze({
   // LM Studio / ReaderLM (optional)
   lmstudioUrl: process.env.HUGIN_LMSTUDIO_URL || process.env.LMSTUDIO_URL || "http://localhost:1234",
   readerlmModel: process.env.HUGIN_READERLM_MODEL || process.env.READERLM_MODEL || "readerlm-v2-mlx",
-  readerlmMaxInput: parseInt(process.env.HUGIN_READERLM_MAX_INPUT || process.env.READERLM_MAX_INPUT || "15000"),
+  readerlmMaxInput: parseInt(process.env.HUGIN_READERLM_MAX_INPUT || process.env.READERLM_MAX_INPUT || "15000", 10),
 
   // Puppeteer
   chromePath: findChrome(),
-  puppeteerTimeout: parseInt(process.env.HUGIN_PUPPETEER_TIMEOUT || process.env.PUPPETEER_TIMEOUT || "15000"),
+  puppeteerTimeout: parseInt(process.env.HUGIN_PUPPETEER_TIMEOUT || process.env.PUPPETEER_TIMEOUT || "15000", 10),
 
   // Cache
   cacheDir: process.env.HUGIN_CACHE_DIR || process.env.CACHE_DIR || join(ROOT, ".cache"),
-  cacheTtl: parseInt(process.env.HUGIN_CACHE_TTL || process.env.CACHE_TTL || "86400"), // 24h
+  cacheTtl: parseInt(process.env.HUGIN_CACHE_TTL || process.env.CACHE_TTL || "86400", 10), // 24h
 
   // Readability
-  readabilityMinChars: parseInt(process.env.HUGIN_READABILITY_MIN_CHARS || "200"),
+  readabilityMinChars: parseInt(process.env.HUGIN_READABILITY_MIN_CHARS || "200", 10),
 
   // Project root (for docker-compose, etc.)
   root: ROOT,
 
   // Computed (not in the literal to avoid TDZ)
-  get userAgent() { return `Hugin/${config.version}`; },
+  get userAgent() {
+    return `Hugin/${config.version}`;
+  },
 });

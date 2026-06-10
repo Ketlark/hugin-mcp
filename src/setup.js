@@ -15,10 +15,18 @@ const GRAY = "\x1b[90m";
 const BOLD = "\x1b[1m";
 const RESET = "\x1b[0m";
 
-function ok(msg) { console.log(`${GREEN}  ✓${RESET} ${msg}`); }
-function fail(msg) { console.log(`${RED}  ✗${RESET} ${msg}`); }
-function warn(msg) { console.log(`${YELLOW}  ⚠${RESET} ${msg}`); }
-function info(msg) { console.log(`${GRAY}    ${msg}${RESET}`); }
+function ok(msg) {
+  console.log(`${GREEN}  ✓${RESET} ${msg}`);
+}
+function fail(msg) {
+  console.log(`${RED}  ✗${RESET} ${msg}`);
+}
+function warn(msg) {
+  console.log(`${YELLOW}  ⚠${RESET} ${msg}`);
+}
+function info(msg) {
+  console.log(`${GRAY}    ${msg}${RESET}`);
+}
 
 async function setup() {
   console.log(`\n${BOLD}Hugin MCP — Setup${RESET}\n`);

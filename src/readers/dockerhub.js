@@ -33,9 +33,12 @@ export async function read(url) {
     if (data.architecture?.length) md += `**Arch:** ${data.architecture.join(", ")}\n\n`;
 
     // Fetch top tags
-    const tagsR = await fetch(`https://hub.docker.com/v2/repositories/${namespace}/${name}/tags/?page_size=10&ordering=last_updated`, {
-      signal: AbortSignal.timeout(10000),
-    });
+    const tagsR = await fetch(
+      `https://hub.docker.com/v2/repositories/${namespace}/${name}/tags/?page_size=10&ordering=last_updated`,
+      {
+        signal: AbortSignal.timeout(10000),
+      },
+    );
     if (tagsR.ok) {
       const tagsData = await tagsR.json();
       if (tagsData.results?.length) {
@@ -55,7 +58,12 @@ export async function read(url) {
     }
 
     console.error(`   Docker Hub: ${namespace}/${name} (${fmtNumber(data.pull_count)} pulls)`);
-    return { title: `${namespace}/${name}`, description: data.short_description || "", content: md, source: "docker-hub" };
+    return {
+      title: `${namespace}/${name}`,
+      description: data.short_description || "",
+      content: md,
+      source: "docker-hub",
+    };
   } catch (e) {
     console.error(`   Docker Hub failed: ${e.message}`);
     return null;
@@ -64,15 +72,15 @@ export async function read(url) {
 
 function fmtNumber(n) {
   if (!n) return "0";
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
   return String(n);
 }
 
 function fmtSize(bytes) {
   if (!bytes) return "-";
-  if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + " GB";
-  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + " MB";
-  return (bytes / 1e3).toFixed(0) + " KB";
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  return `${(bytes / 1e3).toFixed(0)} KB`;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@ketlark/hugin-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Hugin MCP — 100% local, 100% free MCP server for web search and web reading. No API keys needed. Self-hosted alternative to Tavily, Exa, Jina Reader, Firecrawl, and Brave Search API.",
   "type": "module",
   "main": "src/index.js",
@@ -17,7 +17,12 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs",
+    "test:unit": "node --test test/unit/*.test.mjs",
+    "test:all": "npm run test:unit && npm test",
+    "lint": "biome check src/ test/",
+    "lint:fix": "biome check --fix --unsafe src/ test/",
+    "format": "biome format --write src/ test/"
   },
   "keywords": [
     "mcp",
@@ -62,5 +67,8 @@
     "puppeteer-core": "^24.43.0",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16"
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import { robustFetch } from "../fetcher.js";
-import { stripTags, decodeHTMLEntities, safeHostname } from "../html.js";
+import { decodeHTMLEntities, safeHostname, stripTags } from "../html.js";
 
 export async function searchBing(query, opts = {}) {
   const { count = 10 } = opts;
@@ -11,11 +11,12 @@ export async function searchBing(query, opts = {}) {
     `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=${Math.min(count, 20)}`,
     {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html",
         "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
       },
-    }
+    },
   );
   if (!r.ok) throw new Error(`Bing ${r.status}`);
   const html = await r.text();
@@ -43,7 +44,13 @@ export async function searchBing(query, opts = {}) {
     }
   }
   return {
-    results, query, numberOfResults: results.length,
-    suggestions: [], infoboxes: [], answers: [], corrections: [], page: 1,
+    results,
+    query,
+    numberOfResults: results.length,
+    suggestions: [],
+    infoboxes: [],
+    answers: [],
+    corrections: [],
+    page: 1,
   };
 }

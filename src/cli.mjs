@@ -8,9 +8,9 @@
  *   node src/cli.mjs status
  */
 
-import { spawn } from "child_process";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { spawn } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -50,12 +50,15 @@ if (cmd === "status") {
 }
 
 // --- MCP-based commands ---
-if (!arg1) { console.error("Missing argument. Run with --help."); process.exit(1); }
+if (!arg1) {
+  console.error("Missing argument. Run with --help.");
+  process.exit(1);
+}
 
 let toolName, toolArgs;
 if (cmd === "search") {
   toolName = "web_search";
-  toolArgs = { query: arg1, count: parseInt(arg2) || 5 };
+  toolArgs = { query: arg1, count: parseInt(arg2, 10) || 5 };
 } else if (cmd === "read") {
   toolName = "web_read";
   toolArgs = { url: arg1, llm: arg2 === "llm", max_length: 5000 };
@@ -89,12 +92,17 @@ child.stdout.on("data", (d) => {
 
 const messages = [
   JSON.stringify({
-    jsonrpc: "2.0", id: 1, method: "initialize",
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
     params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "hugin-mcp-cli", version: "1.0" } },
   }),
   JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
   JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: toolName, arguments: toolArgs } }),
 ];
-child.stdin.write(messages.join("\n") + "\n");
+child.stdin.write(`${messages.join("\n")}\n`);
 
-setTimeout(() => { child.kill(); process.exit(1); }, 30000);
+setTimeout(() => {
+  child.kill();
+  process.exit(1);
+}, 30000);

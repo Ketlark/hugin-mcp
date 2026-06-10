@@ -21,11 +21,13 @@
 
 ---
 
-Two tools. That's all your agent needs.
+Two tools become four. That's all your agent needs.
 
 ```
-web_search("rust async tutorial")     → 10 results from 70+ engines
-web_read("https://github.com/...")    → clean markdown, zero noise
+web_search("rust async tutorial")          → 10 results from 70+ engines
+web_read("https://github.com/...")          → clean markdown, zero noise
+web_search_read("rust async tutorial")      → search + read top 3 in one call
+web_screenshot("https://example.com")       → PNG screenshot of any page
 ```
 
 Hugin runs a local SearXNG metasearch engine and 14 specialized page readers. Named after Odin's raven who scouted the world each morning and came back with answers.
@@ -133,7 +135,9 @@ This checks Docker, SearXNG, Chrome, and prints a status report.
   "engine": "auto",
   "categories": "general",
   "language": "en",
-  "time_range": "month"
+  "time_range": "month",
+  "domains": ["github.com", "stackoverflow.com"],
+  "filetype": "pdf"
 }
 ```
 
@@ -146,6 +150,8 @@ This checks Docker, SearXNG, Chrome, and prints a status report.
 | `language` | auto | `en`, `fr`, `de`, `es`, `ja`, `zh`, etc. |
 | `time_range` | — | `day`, `month`, `year` |
 | `pageno` | 1 | Page number |
+| `domains` | — | Restrict to specific domains, e.g. `["github.com"]` |
+| `filetype` | — | Restrict to file type, e.g. `"pdf"`, `"doc"` |
 
 Results are cached for 24 hours.
 
@@ -180,6 +186,57 @@ Batch — read multiple URLs in parallel:
 | `max_length` | — | Truncate content to N characters |
 
 Content is cached for 24 hours.
+
+### `web_search_read`
+
+Search + read in one call. Eliminates the need for separate search → read → read round trips.
+
+```json
+{
+  "query": "rust async await tutorial",
+  "count": 10,
+  "read_count": 3,
+  "max_length": 5000
+}
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `query` | *required* | Search query |
+| `count` | 10 | Max search results (1–20) |
+| `read_count` | 3 | Number of top results to auto-read (1–5) |
+| `engine` | `"auto"` | `"auto"`, `"searxng"`, or `"bing"` |
+| `categories` | — | Same as `web_search` |
+| `language` | auto | Same as `web_search` |
+| `time_range` | — | Same as `web_search` |
+| `domains` | — | Same as `web_search` |
+| `filetype` | — | Same as `web_search` |
+| `format` | `"markdown"` | `"markdown"` or `"text"` |
+| `max_length` | — | Max content chars per page read |
+
+### `web_screenshot`
+
+Capture a screenshot of any web page. Returns a PNG or JPEG image.
+
+```json
+{
+  "url": "https://github.com",
+  "width": 1280,
+  "height": 800,
+  "full_page": false,
+  "format": "png"
+}
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `url` | *required* | URL to screenshot |
+| `width` | 1280 | Viewport width in pixels |
+| `height` | 800 | Viewport height in pixels |
+| `full_page` | `false` | Capture the full scrollable page |
+| `format` | `"png"` | `"png"` or `"jpeg"` |
+
+Requires Chrome/Chromium installed.
 
 ---
 
@@ -219,8 +276,11 @@ Content is cached for 24 hours.
 | **No API key** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Web search** | ✅ 70+ engines | ✅ | ✅ neural | ✅ | ✅ | ✅ |
 | **Page reading** | ✅ 14 handlers | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Search + Read** | ✅ one call | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Screenshots** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **Batch reads** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **Cache** | ✅ SQLite | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Domain filters** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
 | **Data privacy** | Stays on your machine | Sent to Tavily | Sent to Exa | Sent to Jina | Sent to Brave | Sent to Firecrawl |
 
 Every competitor sends your queries or page content to a cloud API. Hugin doesn't.
@@ -295,6 +355,7 @@ src/
 ├── fetcher.js            # HTTP fetch (retry, rate-limit) + Puppeteer
 ├── html.js               # Readability + Turndown
 ├── llm.js                # ReaderLM-v2 client
+├── screenshot.js         # Puppeteer screenshot → base64
 ├── format.js             # Response formatters
 ├── search/
 │   ├── searxng.js        # SearXNG client + auto-start + Docker detection

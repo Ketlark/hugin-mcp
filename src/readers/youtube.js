@@ -18,7 +18,7 @@ export async function read(url) {
       signal: AbortSignal.timeout(10000),
     });
     const pageHtml = await pageResp.text();
-    const apiKey = pageHtml.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1] || "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+    const _apiKey = pageHtml.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1] || "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 
     // Step 2: Get captions track list (Android client impersonation)
     const resp = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
@@ -38,16 +38,17 @@ export async function read(url) {
 
     const title = playerData.videoDetails?.title || "";
     const author = playerData.videoDetails?.author || "";
-    const lengthSeconds = parseInt(playerData.videoDetails?.lengthSeconds || "0");
+    const lengthSeconds = parseInt(playerData.videoDetails?.lengthSeconds || "0", 10);
 
     // Find caption tracks
     const captionTracks = playerData.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
     if (!captionTracks.length) return null;
 
     // Prefer manual (not auto-generated), English or first
-    const track = captionTracks.find((t) => !t.kind && t.languageCode?.startsWith("en"))
-      || captionTracks.find((t) => !t.kind)
-      || captionTracks[0];
+    const track =
+      captionTracks.find((t) => !t.kind && t.languageCode?.startsWith("en")) ||
+      captionTracks.find((t) => !t.kind) ||
+      captionTracks[0];
 
     // Step 3: Fetch caption XML
     const captionResp = await fetch(track.baseUrl, { signal: AbortSignal.timeout(10000) });
@@ -56,11 +57,13 @@ export async function read(url) {
 
     // Parse <text start="0.27" dur="3.12">Hello world</text>
     const segments = [...captionXml.matchAll(/<text[^>]*start="([^"]+)"[^>]*dur="([^"]+)"[^>]*>([\s\S]*?)<\/text>/g)];
-    const transcript = segments.map((s) => {
-      const text = decodeXmlEntities(stripTags(s[3]));
-      const start = parseFloat(s[1]);
-      return `[${fmtTime(start)}] ${text}`;
-    }).join("\n");
+    const transcript = segments
+      .map((s) => {
+        const text = decodeXmlEntities(stripTags(s[3]));
+        const start = parseFloat(s[1]);
+        return `[${fmtTime(start)}] ${text}`;
+      })
+      .join("\n");
 
     if (!transcript) return null;
 
@@ -77,12 +80,18 @@ export async function read(url) {
 
 // --- Helpers ---
 
-function stripTags(html) { return html.replace(/<[^>]+>/g, ""); }
+function stripTags(html) {
+  return html.replace(/<[^>]+>/g, "");
+}
 
 function decodeXmlEntities(text) {
   return text
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, " ");
 }
 

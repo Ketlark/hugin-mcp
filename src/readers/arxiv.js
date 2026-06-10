@@ -3,9 +3,9 @@
  * No API key needed, just follow redirects and parse HTML.
  */
 
-import { robustFetch } from "../fetcher.js";
 import { config } from "../config.js";
-import { htmlToMarkdown, stripTags } from "../html.js";
+import { robustFetch } from "../fetcher.js";
+import { stripTags } from "../html.js";
 
 export function canHandle(url) {
   return /arxiv\.org\/abs\//.test(url);
@@ -33,9 +33,7 @@ export async function read(url) {
 
     // Extract abstract from the page
     const abstractMatch = html.match(/id="abstract"[^>]*>([\s\S]*?)<\/div>/);
-    const abstract = abstractMatch
-      ? stripTags(abstractMatch[1]).replace(/\s+/g, " ").trim()
-      : "";
+    const abstract = abstractMatch ? stripTags(abstractMatch[1]).replace(/\s+/g, " ").trim() : "";
 
     // Extract categories
     const subjects = html.match(/class="primary-subject"[^>]*>([^<]*)/)?.[1] || "";

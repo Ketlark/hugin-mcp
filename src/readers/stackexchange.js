@@ -21,7 +21,11 @@ function getSite(hostname) {
 }
 
 export function canHandle(url) {
-  try { return getSite(new URL(url).hostname) !== null; } catch { return false; }
+  try {
+    return getSite(new URL(url).hostname) !== null;
+  } catch {
+    return false;
+  }
 }
 
 export async function read(url) {
@@ -48,15 +52,20 @@ export async function read(url) {
 
     let md = `# ${question.title}\n\n`;
     md += `**Score** ${question.score} | 💬 ${question.answer_count} answers | 📅 ${new Date(question.creation_date * 1000).toLocaleDateString()}\n\n`;
-    md += stripHtml(question.body).substring(0, 3000) + "\n\n---\n\n";
+    md += `${stripHtml(question.body).substring(0, 3000)}\n\n---\n\n`;
 
     for (const a of (aData.items || []).slice(0, 5)) {
       const accepted = a.is_accepted ? " ✅ ACCEPTED" : "";
       md += `## Answer by ${a.owner?.display_name || "anonymous"} (${a.score} pts${accepted})\n\n`;
-      md += stripHtml(a.body).substring(0, 3000) + "\n\n";
+      md += `${stripHtml(a.body).substring(0, 3000)}\n\n`;
     }
     console.error(`   StackExchange API: ${site} #${qId} (${question.answer_count} answers)`);
-    return { title: question.title, description: stripHtml(question.body).substring(0, 200), content: md, source: "stackexchange-api" };
+    return {
+      title: question.title,
+      description: stripHtml(question.body).substring(0, 200),
+      content: md,
+      source: "stackexchange-api",
+    };
   } catch (e) {
     console.error(`   StackExchange API failed: ${e.message}`);
     return null;
@@ -64,5 +73,13 @@ export async function read(url) {
 }
 
 function stripHtml(h) {
-  return h ? h.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").trim() : "";
+  return h
+    ? h
+        .replace(/<[^>]*>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&nbsp;/g, " ")
+        .trim()
+    : "";
 }

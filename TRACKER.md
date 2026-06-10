@@ -46,10 +46,9 @@
 > Features que la majorité de nos concurrents ont et qui nous manquent pour être crédibles.
 
 ### Inspiré de web-search-mcp (mrkrsl, 851⭐)
-- [ ] **`full-web-search` — search + auto-read combiné** — Un seul appel qui retourne les résultats de recherche **avec le contenu des top N pages déjà extrait**. L'agent n'a pas besoin de faire search→read→read→read, tout arrive en un coup. Paramètres : `query`, `limit` (1-5), `includeContent` (bool).
-  - **Qui l'a** : mrkrsl ✅, Tavily ✅, Firecrawl ✅
-  - **Impact** : Réduit le nombre de tours agent de N+1 → 1
-  - **Effort** : 30min (réutilise `handleSearch` + `readPage` en interne)
+- [x] **`web_search_read` — search + auto-read combiné** — Un seul appel qui retourne les résultats de recherche **avec le contenu des top N pages déjà extrait**. L'agent n'a pas besoin de faire search→read→read→read, tout arrive en un coup.
+  - **Qui l'a** : mrkrsl ✅, Tavily ✅, Firecrawl ✅, **Hugin ✅ (v1.1)**
+  - **Paramètres** : `query`, `count`, `read_count` (1-5), `domains`, `filetype`, `format`, `max_length`
 
 - [ ] **Quality scoring des résultats search** — Noter la pertinence des résultats retournés par chaque moteur (0 à 1). Si le score < seuil, essayer le moteur suivant. Évite de renvoyer des résultats de merde quand un moteur déraille.
   - **Qui l'a** : mrkrsl ✅ (Jaccard + seuil configurable)
@@ -64,10 +63,10 @@
   - **Effort** : 1h
 
 ### Inspiré de Jina MCP (673⭐) & Exa MCP (4.4k⭐)
-- [ ] **Screenshot tool** — `web_screenshot` : Puppeteer screenshot → base64 PNG. Permet à l'agent de "voir" une page (graphs, charts, layouts, memes, UI).
-  - **Qui l'a** : Jina ✅ (`capture_screenshot_url`), Playwright MCP ✅, Crawl4AI ✅
-  - **Effort** : 20min (`page.screenshot({ encoding: 'base64' })`)
-  - **Note** : Jina propose aussi `guess_datetime_url` (détecter la date de publication d'une page) — utile pour le search ranking
+- [x] **Screenshot tool** — `web_screenshot` : Puppeteer screenshot → base64 PNG. Permet à l'agent de "voir" une page (graphs, charts, layouts, memes, UI).
+  - **Qui l'a** : Jina ✅ (`capture_screenshot_url`), Playwright MCP ✅, Crawl4AI ✅, **Hugin ✅ (v1.1)**
+  - **Paramètres** : `url`, `width`, `height`, `full_page`, `format` (png/jpeg)
+  - **Effort** : fait (20min)
 
 - [ ] **Dedup sémantique** — Filtrer les résultats de search qui pointent vers le même contenu (mirrors, reposts, agrégateurs). Jina utilise des embeddings + submodular optimization pour ça.
   - **Qui l'a** : Jina ✅ (`deduplicate_strings`, `deduplicate_images` via embeddings)
@@ -115,12 +114,12 @@
   - **Impact** : Meilleure qualité de résultats, 100 req/j gratuites
   - **Effort** : 30min
 
-- [ ] **Search by domain** — Paramètre `domains[]` dans SearXNG pour cibler des sites spécifiques (`site:github.com`). Déjà supporté par SearXNG, juste l'exposer dans le schema.
-  - **Qui l'a** : Brave Search MCP ✅, Linkup ✅ (`includeDomains`/`excludeDomains`), Firecrawl ✅
-  - **Effort** : 15min
+- [x] **Search by domain** — Paramètre `domains[]` dans SearXNG pour cibler des sites spécifiques (`site:github.com`). Déjà supporté par SearXNG, juste l'exposer dans le schema.
+  - **Qui l'a** : Brave Search MCP ✅, Linkup ✅ (`includeDomains`/`excludeDomains`), Firecrawl ✅, **Hugin ✅ (v1.1)**
+  - **Effort** : fait
 
-- [ ] **Search by file type** — Paramètre `filetype:pdf` etc. dans SearXNG. Utile pour trouver des papers et des docs.
-  - **Effort** : 15min
+- [x] **Search by file type** — Paramètre `filetype:pdf` etc. dans SearXNG. Utile pour trouver des papers et des docs.
+  - **Effort** : fait
 
 - [ ] **Related pages** — `web_related` : Trouver des pages similaires via `link:` query ou Google `related:` operator via SearXNG.
   - **Qui l'a** : Exa ✅ (neural similarity)
@@ -291,9 +290,9 @@
 | **GitHub API** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **YouTube** | ✅ transcripts | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Wikipedia** | ✅ 30x clean | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **full-web-search** | ❌ bientôt | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **full-web-search** | ✅ v1.1 | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Deep research** | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Screenshots** | ❌ bientôt | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **Screenshots** | ✅ v1.1 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
 | **Extraction structurée** | ❌ bientôt | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **Crawl sitemap** | ❌ bientôt | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **Reranker** | ❌ bientôt | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
@@ -320,16 +319,17 @@
 ```
 
 **Hugin est le seul qui combine :**
-- Search + Read + Readers spécialisés dans un seul serveur
+- Search + Read + Search&Read + Screenshot + Readers spécialisés dans un seul serveur
 - 100% local, 100% gratuit, zéro API key
 - Zero config (Chrome auto-detect, SearXNG auto-start)
 - Cache SQLite (personne d'autre ne cache)
 - 14 readers spécialisés (personne d'autre n'en a autant)
 - ~2MB install (le plus léger de tous ceux qui font search+read)
+- Domain filters + file type filters sur le search
 
 **Ce qu'on doit rattraper pour être le meilleur :**
-1. `full-web-search` (mrkrsl, Tavily, Firecrawl l'ont)
-2. Screenshots (Jina, Playwright l'ont)
+1. ~~`full-web-search`~~ ✅ fait (v1.1)
+2. ~~Screenshots~~ ✅ fait (v1.1)
 3. Extraction structurée JSON (Firecrawl, Crawl4AI l'ont)
 4. Deep research / crawl (Firecrawl, Tavily, Crawl4AI l'ont)
 5. Reranker (Jina, Exa l'ont)
@@ -365,6 +365,13 @@
 ---
 
 ## Changelog
+
+### v1.1.0 — 2026-06-10 — Search + Read + Screenshot
+- 🆕 `web_search_read` — search + auto-read top N pages en un seul appel
+- 🆕 `web_screenshot` — screenshot PNG/JPEG via Puppeteer, paramétrable (viewport, full page, format)
+- 🆕 `web_search` param `domains[]` — filtrer par domaine (site:github.com etc.)
+- 🆕 `web_search` param `filetype` — filtrer par type de fichier (pdf, doc, ppt…)
+- 📖 README mis à jour avec les 4 tools + tableau comparatif enrichi
 
 ### v8.0.0 — 2026-05-09 — Rework complet
 - 🏗️ Renamed: mcp-local-websearch → @ketlark/hugin-mcp
