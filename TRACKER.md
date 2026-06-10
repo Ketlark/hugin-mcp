@@ -1,3 +1,5 @@
+> Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des releases publiques.
+
 # Hugin MCP — Roadmap : le Search + Reader ultime pour l'agentic
 
 ## Philosophie
