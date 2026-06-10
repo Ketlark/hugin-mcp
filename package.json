@@ -4,8 +4,16 @@
   "description": "Hugin MCP — 100% local, 100% free MCP server for web search and web reading. No API keys needed. Self-hosted alternative to Tavily, Exa, Jina Reader, Firecrawl, and Brave Search API.",
   "type": "module",
   "main": "src/index.js",
+  "files": [
+    "src",
+    "docker-compose.yml",
+    "searxng-settings.yml",
+    "LICENSE",
+    "README.md"
+  ],
   "bin": {
-    "hugin-mcp": "src/index.js"
+    "hugin-mcp": "src/index.js",
+    "hugin-mcp-setup": "src/setup.js"
   },
   "scripts": {
     "start": "node src/index.js",

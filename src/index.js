@@ -16,7 +16,7 @@ import { config } from "./config.js";
 import { getCached, setCache, getCacheCount } from "./cache.js";
 import { checkReaderLM } from "./llm.js";
 import { warmBrowser } from "./fetcher.js";
-import { searchSearXNG, ensureSearXNG, startSearXNG } from "./search/searxng.js";
+import { searchSearXNG, ensureSearXNGReady } from "./search/searxng.js";
 import { searchBing } from "./search/bing.js";
 import { readPage } from "./readers/index.js";
 import { formatSearchResponse, formatReadResponse } from "./format.js";
@@ -157,12 +157,22 @@ async function handleRead(args) {
 // ============================================================================
 
 async function main() {
-  console.error(`🪶 Hugin v${config.version}`);
+  console.error(`Hugin v${config.version}`);
 
-  // SearXNG
-  searxngAvailable = await ensureSearXNG();
-  if (!searxngAvailable) searxngAvailable = await startSearXNG();
-  console.error(searxngAvailable ? "   ✅ SearXNG" : "   ⚠️  SearXNG unavailable — Bing fallback");
+  // SearXNG (auto-start if Docker is available)
+  const searxng = await ensureSearXNGReady();
+  searxngAvailable = searxng.available;
+  if (searxng.available) {
+    console.error("   SearXNG ready");
+  } else {
+    console.error("   SearXNG unavailable — using Bing fallback");
+    if (searxng.reason === "not_installed") {
+      console.error("   Install Docker for full search: https://docs.docker.com/get-docker/");
+    } else if (searxng.reason === "not_running") {
+      console.error("   Start Docker to enable full search");
+    }
+    console.error("   Run: npx @ketlark/hugin-mcp setup");
+  }
 
   // ReaderLM (optional)
   const hasLLM = await checkReaderLM();

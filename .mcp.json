@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "hugin-mcp": {
+      "command": "node",
+      "args": [
+        "src/index.js"
+      ],
+      "lifecycle": "lazy",
+      "idleTimeout": 10,
+      "directTools": true
+    }
+  }
+}
+
