@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@ketlark/hugin-mcp"><img src="https://img.shields.io/npm/v/@ketlark/hugin-mcp?color=blue" alt="npm"></a>
+  <img src="https://img.shields.io/github/actions/workflow/status/Ketlark/hugin-mcp/ci.yml?branch=main" alt="CI">
   <img src="https://img.shields.io/node/v/@ketlark/hugin-mcp" alt="node">
   <img src="https://img.shields.io/github/license/Ketlark/hugin-mcp" alt="license">
 </p>
