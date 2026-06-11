@@ -10,12 +10,14 @@
 
 ---
 
-## ✅ Déjà implémenté (v8.0)
+## ✅ Déjà implémenté
 
 ### 🔍 Search
 - [x] SearXNG (aggrège Google, Bing, DuckDuckGo, Brave, Startpage, +70 engines)
 - [x] Bing scraping fallback (quand Docker indisponible)
 - [x] Dedup résultats, cache 24h, retry sur 429
+- [x] `domains[]` — filtrer par domaine (v1.1)
+- [x] `filetype` — filtrer par type de fichier (v1.1)
 
 ### 📖 Readers spécialisés (14)
 - [x] **GitHub** — REST API (issues, PRs, repos, fichiers) — 60 req/h sans auth
@@ -30,6 +32,10 @@
 - [x] **Docker Hub** — v2 API (pulls, tags, tailles)
 - [x] **PDF** — pdf-parse (extraction texte pur JS)
 
+### 🔧 Tools (v1.1)
+- [x] `web_search_read` — search + auto-read top N pages en un seul appel
+- [x] `web_screenshot` — screenshot PNG/JPEG via Puppeteer (viewport, full page, format)
+
 ### 🛠️ Infrastructure
 - [x] SQLite cache 24h
 - [x] Batch parallel reads `urls[]`
@@ -39,7 +45,18 @@
 - [x] Architecture modulaire (23 modules, SOLID)
 - [x] Multi-platform (Chrome auto-detect macOS/Linux/Windows/Brave/Edge)
 - [x] Graceful degradation (no Chrome = works without Puppeteer)
-- [x] Smoke tests (npm test → 7/7)
+
+### 🧪 Quality of Life (v1.1)
+- [x] Biome (linter + formatter) — `npm run lint` / `npm run lint:fix`
+- [x] Unit tests (format.js, html.js) — `npm run test:unit` (12 tests)
+- [x] Smoke tests — `npm test` (14 checks)
+- [x] Husky pre-commit hooks — lint-staged + test:unit
+- [x] Commitlint — conventional commits enforced
+- [x] CI GitHub Actions — lint + test avec SearXNG service
+- [x] Release workflow — npm trusted publishing (provenance) + changelog auto
+- [x] CHANGELOG.md (Keep a Changelog)
+- [x] CONTRIBUTING.md
+- [x] README badges (npm, CI, node, license)
 
 ---
 
@@ -368,12 +385,19 @@
 
 ## Changelog
 
+### v1.1.1 — 2026-06-10 — QoL hardening
+- 🧪 Biome (linter + formatter)
+- 🧪 Unit tests (12) + smoke tests (14)
+- 🪝 Husky + lint-staged + commitlint
+- 🤖 CI GitHub Actions (lint + test + SearXNG health check)
+- 🚀 Release workflow (npm trusted publishing + changelog auto)
+- 📖 CHANGELOG.md, CONTRIBUTING.md, README badges
+
 ### v1.1.0 — 2026-06-10 — Search + Read + Screenshot
 - 🆕 `web_search_read` — search + auto-read top N pages en un seul appel
-- 🆕 `web_screenshot` — screenshot PNG/JPEG via Puppeteer, paramétrable (viewport, full page, format)
-- 🆕 `web_search` param `domains[]` — filtrer par domaine (site:github.com etc.)
-- 🆕 `web_search` param `filetype` — filtrer par type de fichier (pdf, doc, ppt…)
-- 📖 README mis à jour avec les 4 tools + tableau comparatif enrichi
+- 🆕 `web_screenshot` — screenshot PNG/JPEG via Puppeteer
+- 🆕 `web_search` param `domains[]` — filtrer par domaine
+- 🆕 `web_search` param `filetype` — filtrer par type de fichier
 
 ### v8.0.0 — 2026-05-09 — Rework complet
 - 🏗️ Renamed: mcp-local-websearch → @ketlark/hugin-mcp
