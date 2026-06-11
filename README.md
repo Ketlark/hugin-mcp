@@ -37,18 +37,7 @@ Hugin runs a local SearXNG metasearch engine and 14 specialized page readers. Na
 
 ## Install
 
-### Step 1 — Docker
-
-SearXNG runs in Docker and aggregates 70+ search engines (Google, Bing, DuckDuckGo, Brave, Startpage…). Without it, Hugin falls back to Bing — works, but limited.
-
-```bash
-# Make sure Docker is running, then:
-docker compose up -d
-```
-
-No Docker? [Install Docker Desktop](https://docs.docker.com/get-docker/) first.
-
-### Step 2 — MCP client
+### Step 1 — Add to your MCP client
 
 Pick your client below.
 
@@ -115,13 +104,21 @@ Same pattern — point to `npx -y @ketlark/hugin-mcp@latest`:
 
 </details>
 
-### Step 3 — Verify (optional)
+### Step 2 — Run setup
 
 ```bash
 npx @ketlark/hugin-mcp setup
 ```
 
-This checks Docker, SearXNG, Chrome, and prints a status report.
+This one command checks everything and tells you what's missing:
+- **SearXNG** (Docker) — aggregates 70+ search engines. Without it, Hugin falls back to Bing (works, but limited). No Docker? [Install Docker Desktop](https://docs.docker.com/get-docker/) first.
+- **Chrome** — for screenshots and headless page reads. Auto-detected.
+
+If Docker is running, setup starts SearXNG automatically.
+
+### Step 3 — Done
+
+Restart your MCP client. Hugin is ready.
 
 ---
 
